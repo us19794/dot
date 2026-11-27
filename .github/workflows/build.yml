@@ -11,6 +11,10 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
+      - name: Unzip project if it was uploaded as a zip
+        run: |
+          for z in *.zip; do [ -f "$z" ] && unzip -oq "$z" -d unpacked; done || true
+
       - uses: actions/setup-java@v4
         with:
           distribution: temurin
@@ -22,9 +26,14 @@ jobs:
 
       - name: Build debug APK
         run: |
-          DIR=$(dirname "$(find . -name settings.gradle.kts -not -path '*/node_modules/*' | head -1)")
-          echo "Android project found in: $DIR"
-          cd "$DIR"
+          S=$(find . -name settings.gradle.kts -not -path './.git/*' | head -1)
+          if [ -z "$S" ]; then
+            echo "settings.gradle.kts not found. Repo contents:"
+            ls -R | head -80
+            exit 1
+          fi
+          echo "Android project found in: $(dirname "$S")"
+          cd "$(dirname "$S")"
           gradle assembleDebug --no-daemon
 
       - uses: actions/upload-artifact@v4
